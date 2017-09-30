@@ -180,6 +180,13 @@ LJLIB_CF(table_setreadonly)
   return 1;
 }
 
+LJLIB_CF(table_isreadonly)
+{
+  GCtab *t = lj_lib_checktab(L, 1);
+  setboolV(L->top-1, lj_tab_isro(t));
+  return 1;
+}
+
 void LJ_FASTCALL lj_err_tabro(lua_State *L)
 {
   lj_err_msg(L, LJ_ERR_TABRO);
