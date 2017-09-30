@@ -492,6 +492,7 @@ typedef struct GCtab {
 #if LJ_GC64
   MRef freetop;		/* Top of free elements. */
 #endif
+  uint8_t isro; /* is table readonly */
 } GCtab;
 
 #define sizetabcolo(n)	((n)*sizeof(TValue) + sizeof(GCtab))

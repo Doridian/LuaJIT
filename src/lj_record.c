@@ -1480,8 +1480,8 @@ TRef lj_record_idx(jit_State *J, RecordIndex *ix)
     int keybarrier = tref_isgcv(ix->key) && !tref_isnil(ix->val);
     TRef tr;
     /* make sure the table stays non readonly */
-    tr = emitir(IRT(IR_FLOAD, IRT_I8), ix->tab, IRFL_TAB_COLO);
-    emitir(IRTG(IR_LT, IRT_I8), tr, lj_ir_kint(J, LJ_MAX_COLOSIZE+1));
+    tr = emitir(IRT(IR_FLOAD, IRT_I8), ix->tab, IRFL_TAB_ISRO);
+    emitir(IRTG(IR_LT, IRT_I8), tr, lj_ir_kint(J, 1));
 
     if (tref_ref(xref) < rbref) {  /* HREFK forwarded? */
       lj_ir_rollback(J, rbref);  /* Rollback to eliminate hmask guard. */

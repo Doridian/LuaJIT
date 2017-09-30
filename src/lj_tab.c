@@ -106,6 +106,7 @@ static GCtab *newtab(lua_State *L, uint32_t asize, uint32_t hbits)
     lua_assert((sizeof(GCtab) & 7) == 0);
     t = (GCtab *)lj_mem_newgco(L, sizetabcolo(asize));
     t->gct = ~LJ_TTAB;
+    t->isro = 0;
     t->nomm = (uint8_t)~0;
     t->colo = (int8_t)asize;
     setmref(t->array, (TValue *)((char *)t + sizeof(GCtab)));
@@ -121,6 +122,7 @@ static GCtab *newtab(lua_State *L, uint32_t asize, uint32_t hbits)
     Node *nilnode;
     t = lj_mem_newobj(L, GCtab);
     t->gct = ~LJ_TTAB;
+    t->isro = 0;
     t->nomm = (uint8_t)~0;
     t->colo = 0;
     setmref(t->array, NULL);
@@ -187,6 +189,7 @@ GCtab * LJ_FASTCALL lj_tab_dup(lua_State *L, const GCtab *kt)
   t = newtab(L, kt->asize, kt->hmask > 0 ? lj_fls(kt->hmask)+1 : 0);
   lua_assert(kt->asize == t->asize && kt->hmask == t->hmask);
   t->nomm = 0;  /* Keys with metamethod names may be present. */
+  //t->isro = kt->isro;
   asize = kt->asize;
   if (asize > 0) {
     TValue *array = tvref(t->array);
@@ -234,9 +237,9 @@ void LJ_FASTCALL lj_tab_free(global_State *g, GCtab *t)
 {
   if (t->hmask > 0)
     lj_mem_freevec(g, noderef(t->node), t->hmask+1, Node);
-  if (t->asize > 0 && LJ_MAX_COLOSIZE != 0 && (t->colo <= 0 || lj_tab_isro(t)))
+  if (t->asize > 0 && LJ_MAX_COLOSIZE != 0 && t->colo <= 0)
     lj_mem_freevec(g, tvref(t->array), t->asize, TValue);
-  if (LJ_MAX_COLOSIZE != 0 && t->colo && !lj_tab_isro(t))
+  if (LJ_MAX_COLOSIZE != 0 && t->colo)
     lj_mem_free(g, t, sizetabcolo((uint32_t)t->colo & 0x7f));
   else
     lj_mem_freet(g, t);
@@ -244,12 +247,7 @@ void LJ_FASTCALL lj_tab_free(global_State *g, GCtab *t)
 
 void LJ_FASTCALL lj_tab_set_readonly(lua_State *L, GCtab *t)
 {
-  /* table has colocated array so we cannot set out custom colocated size */
-  if (t->colo != 0 && !lj_tab_isro(t)) {
-    lj_err_msg(L, LJ_ERR_TABNORO);
-  }
-
-  t->colo = LJ_MAX_COLOSIZE+1;
+  t->isro = 1;
 }
 
 /* -- Table resizing ------------------------------------------------------ */
