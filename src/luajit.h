@@ -76,4 +76,7 @@ LUA_API const char *luaJIT_profile_dumpstack(lua_State *L, const char *fmt,
 /* Enforce (dynamic) linker error for version mismatches. Call from main. */
 LUA_API void LUAJIT_VERSION_SYM(void);
 
+LUA_API void luaJIT_set_memory_limits(lua_State *L, size_t soft_limit, size_t hard_limit);
+LUA_API size_t luaJIT_get_memory_usage(lua_State *L);
+
 #endif

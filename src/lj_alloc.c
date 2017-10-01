@@ -28,9 +28,11 @@
 #define _GNU_SOURCE
 #endif
 
+#include "luajit.h"
 #include "lj_def.h"
 #include "lj_arch.h"
 #include "lj_alloc.h"
+#include "lj_obj.h"
 
 #ifndef LUAJIT_USE_SYSMALLOC
 
@@ -553,6 +555,11 @@ struct malloc_state {
   mchunkptr  smallbins[(NSMALLBINS+1)*2];
   tbinptr    treebins[NTREEBINS];
   msegment   seg;
+
+  size_t usage;
+  size_t soft_limit;
+  size_t hard_limit;
+  lua_State* L;
 };
 
 typedef struct malloc_state *mstate;
@@ -1251,6 +1258,9 @@ void *lj_alloc_create(void)
     m->seg.base = tbase;
     m->seg.size = tsize;
     m->release_checks = MAX_RELEASE_CHECK_RATE;
+    m->soft_limit = 0;
+    m->hard_limit = 0;
+    m->usage = 0;
     init_bins(m);
     mn = next_chunk(mem2chunk(m));
     init_top(m, mn, (size_t)((tbase + tsize) - (char *)mn) - TOP_FOOT_SIZE);
@@ -1475,9 +1485,25 @@ static LJ_NOINLINE void *lj_alloc_realloc(void *msp, void *ptr, size_t nsize)
   }
 }
 
+static void depressurize_hook(lua_State *L, lua_Debug *ar)
+{
+  lua_sethook(L, depressurize_hook, 0, 1);
+  lua_gc(L, LUA_GCCOLLECT, 0);
+}
+
 void *lj_alloc_f(void *msp, void *ptr, size_t osize, size_t nsize)
 {
-  (void)osize;
+  mstate m = (mstate)msp;
+
+  m->usage += nsize - osize;
+  if (m->hard_limit && m->usage >= m->hard_limit) {
+    return NULL;
+  }
+
+  if (m->soft_limit && m->usage >= m->soft_limit) {
+    lua_sethook(m->L, depressurize_hook, LUA_MASKCOUNT, 1);
+  }
+
   if (nsize == 0) {
     return lj_alloc_free(msp, ptr);
   } else if (ptr == NULL) {
@@ -1486,5 +1512,35 @@ void *lj_alloc_f(void *msp, void *ptr, size_t osize, size_t nsize)
     return lj_alloc_realloc(msp, ptr, nsize);
   }
 }
+
+LUA_API void luaJIT_set_memory_limits(lua_State *L, size_t soft_limit, size_t hard_limit)
+{
+  global_State *g = G(L);
+  if (g->allocf != lj_alloc_f) {
+    return;
+  }
+
+  mstate m = (mstate)(g->allocd);
+  m->L = L;
+  m->soft_limit = soft_limit;
+  m->hard_limit = hard_limit;
+
+  if (soft_limit && m->usage >= soft_limit) {
+    lua_gc(L, LUA_GCCOLLECT, 0);
+  }
+}
+
+LUA_API size_t luaJIT_get_memory_usage(lua_State *L)
+{
+  global_State *g = G(L);
+  if (g->allocf != lj_alloc_f) {
+    return 0;
+  }
+
+  mstate m = (mstate)(g->allocd);
+  return m->usage;
+}
+
+
 
 #endif
