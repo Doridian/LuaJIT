@@ -393,7 +393,7 @@
 |.macro checkint, reg, target; checktp reg, LJ_TISNUM; jne target; .endmacro
 |.macro checkstr, reg, target; checktp reg, LJ_TSTR; jne target; .endmacro
 |.macro checktab, reg, target; checktp reg, LJ_TTAB; jne target; .endmacro
-|.macro checktabro, reg; cmp byte TAB:reg->isro, 1; je ->vmeta_tsetv; .endmacro
+|.macro checktabro, reg, target; cmp byte TAB:reg->isro, 1; je target; .endmacro
 |// These operands must be used with movzx.
 |.define PC_OP, byte [PC-4]
 |.define PC_RA, byte [PC-3]
@@ -1564,6 +1564,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  cmp dword [BASE+4], LJ_TTAB;  jne ->fff_fallback
   |  // Fast path: no mt for table yet and not clearing the mt.
   |  mov TAB:RB, [BASE]
+  |  checktabro RB, ->fff_fallback
   |  cmp dword TAB:RB->metatable, 0;  jne ->fff_fallback
   |  cmp dword [BASE+12], LJ_TTAB;  jne ->fff_fallback
   |  mov TAB:RC, [BASE+8]
@@ -4394,7 +4395,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  ins_ABC	// RA = src, RB = table, RC = key
     |  checktab RB, ->vmeta_tsetv
     |  mov TAB:RB, [BASE+RB*8]
-    |  checktabro RB
+    |  checktabro RB, ->vmeta_tsetv
     |  // Integer key?
     |.if DUALNUM
     |  checkint RC, >5
@@ -4455,7 +4456,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  checktab RB, ->vmeta_tsets
     |  mov TAB:RB, [BASE+RB*8]
     |->BC_TSETS_Z:	// RB = GCtab *, RC = GCstr *, refetches PC_RA.
-    |  checktabro RB
+    |  checktabro RB, ->vmeta_tsets
     |  mov RA, TAB:RB->hmask
     |  and RA, STR:RC->hash
     |  imul RA, #NODE
