@@ -3807,8 +3807,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  not RC
     |  mov STR:RC, [KBASE+RC*8]
     |  checktab TAB:RB, ->vmeta_tsets
-    |->BC_TSETS_Z:	// RB = GCtab *, RC = GCstr *
     |  checktabro RB, ->vmeta_tsets
+    |->BC_TSETS_Z:	// RB = GCtab *, RC = GCstr *
     |  mov TMPRd, TAB:RB->hmask
     |  and TMPRd, STR:RC->hash
     |  imul TMPRd, #NODE
@@ -3872,6 +3872,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  ins_ABC	// RA = src, RB = table, RC = byte literal
     |  mov TAB:RB, [BASE+RB*8]
     |  checktab TAB:RB, ->vmeta_tsetb
+    |  checktabro RB, ->vmeta_tsetb
     |  cmp RCd, TAB:RB->asize
     |  jae ->vmeta_tsetb
     |  shl RCd, 3
@@ -3901,6 +3902,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
   case BC_TSETR:
     |  ins_ABC	// RA = src, RB = table, RC = key
     |  mov TAB:RB, [BASE+RB*8]
+    |  checktabro RB, ->vmeta_tsetr
     |  cleartp TAB:RB
     |.if DUALNUM
     |  mov RC, [BASE+RC*8]
