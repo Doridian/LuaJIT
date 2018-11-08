@@ -4455,8 +4455,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  mov STR:RC, [KBASE+RC*4]
     |  checktab RB, ->vmeta_tsets
     |  mov TAB:RB, [BASE+RB*8]
-    |  checktabro RB, ->vmeta_tsets
     |->BC_TSETS_Z:	// RB = GCtab *, RC = GCstr *, refetches PC_RA.
+    |  checktabro RB, ->vmeta_tsets
     |  mov RA, TAB:RB->hmask
     |  and RA, STR:RC->hash
     |  imul RA, #NODE
